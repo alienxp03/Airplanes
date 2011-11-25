@@ -1,0 +1,122 @@
+/******************************************************************************
+* Filename    : Functions.cpp
+* Author      : FTMK, UTeM
+* Description : Contains the functions required for opening or closing database
+*               connections.
+*               Part of Programming Fundamentals file
+* Modification Log: 
+******************************************************************************/
+
+/* Include files */
+#include "stdafx.h"
+#include <iostream>
+#include <string.h>
+
+#include <sqlca.h>
+#include <sqlcpr.h>
+
+/* Declaration of functions and constants used */
+#include "Functions.h"
+
+using namespace std;
+
+/******************************************************************************
+* Function: fnConnectDB
+* Description: Connect to Oracle 10g Database
+******************************************************************************/
+void fnConnectDB()
+{	
+	/*host variable declaration*/
+	EXEC SQL BEGIN DECLARE SECTION;
+        char connection_name[128];
+	EXEC SQL END DECLARE SECTION;
+	/*copy the connection string to host variable*/
+    strcpy_s(connection_name, "tokwan/abc123@orcl");
+
+	/*redirect to display error if database error occurs*/
+	EXEC SQL WHENEVER SQLERROR DO sql_error("do_connect():CONNECT");
+	EXEC SQL CONNECT :connection_name;
+	
+	/*********/
+	/* this code is to print the connection statement to verify the connection
+	 * is successful. Uncomment this if you want to verify whether the 
+	 * connection to database is successful
+	 * this is not needed in the system*/
+	//printf("Connected to database.\n");
+}
+
+/******************************************************************************
+* Function: fnCloseConnectionDB
+* Description: Closes and commits the database connection
+******************************************************************************/
+void fnCloseDBConnection()
+{
+	/*close database connection*/
+	EXEC SQL COMMIT WORK RELEASE;
+}
+
+/******************************************************************************
+* Function: sql_error
+* Description:  Generic error handler.  The 'routine' parameter should contain 
+* the name of the routine executing when the error occured.  This would be 
+* specified in the 'EXEC SQL WHENEVER SQLERROR DO sql_error()' statement.
+* Input Parameters: 
+*                 char *routine
+******************************************************************************/
+ void sql_error(char *routine)
+{
+	char message_buffer[512];
+	size_t buffer_size;
+	//size_t message_length;
+
+	/* Turn off the call to sql_error() to avoid a possible infinite loop */
+	EXEC SQL WHENEVER SQLERROR CONTINUE;
+	
+	cout<<"\nOracle error while executing "<<routine<<"!\n";
+
+	/* Use sqlglm() to get the full text of the error message. */
+	buffer_size = sizeof(message_buffer);
+	//sqlglm(message_buffer, &buffer_size, &message_length);
+	//cout<<message_length<<", "<<message_buffer<<"\n";
+
+	EXEC SQL ROLLBACK WORK RELEASE;
+	exit(1);
+}
+
+/******************************************************************************
+* Function: toChar
+* Description:  Convert CString to char *
+* Input Parameters: 
+*                 CString string
+******************************************************************************/
+char* toChar(CString string){
+	char *str = (char *) malloc (sizeof(char)*25);
+	wcstombs(str, string.GetBuffer(0), 25);
+	return str;
+}
+
+ /******************************************************************************
+* Function: login
+* Description:  Login into the database
+* Input Parameters: 
+*                 CString _username,CString _password
+******************************************************************************/
+char fnLogin(CString _username,CString _password)
+{
+	EXEC SQL BEGIN DECLARE SECTION;
+		char username[25],password[25];
+		char position[15];
+	EXEC SQL END DECLARE SECTION;
+
+	strcpy_s(username,toChar(_username));
+	strcpy_s(password,toChar(_password));
+
+	EXEC SQL SELECT UPPER(ST_POSITION) INTO :position FROM STAFF 
+		WHERE ST_ID = (SELECT ST_ID FROM LOGIN WHERE LG_USERNAME = :username);
+
+	return position[0];
+}
+
+/******************************************************************************
+* End of DBFunctions.c
+******************************************************************************/
